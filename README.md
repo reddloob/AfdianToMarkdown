@@ -69,6 +69,48 @@ $ .\AfdianToMarkdown.exe -h
 .\AfdianToMarkdown.exe motions --host="ifdian.net" -au "user_id" 
 ```
 
+#### 下载含附件的动态（downloadfile）
+
+按发布时间从新到旧检查作者的动态，只保存当前账号有权访问且包含可下载附件的帖子。
+支持平台附件中的压缩包和其他文件类型；不依赖文件扩展名筛选，不抓取正文中的第三方网盘链接，不自动解压。
+
+```powershell
+.\AfdianToMarkdown.exe downloadfile -au "user_id"
+
+# 使用 ifdian.net，并指定 Cookie 和输出目录
+.\AfdianToMarkdown.exe --host "ifdian.net" --cookie ".\cookies.json" --dir ".\data" downloadfile -au "aqechoo"
+```
+
+`user_id` 是作者主页 `/a/` 后的部分。默认使用程序旁的 `cookies.json`，默认输出到程序旁的 `data`。
+支持全局 `--disable_comment` 和 `--skip_failed`；`--download_media` 不影响此命令（附件始终下载）。
+
+目录沿用 `data/{作者}/motions/`，Markdown 名称仍为 `{yyyy-mm-dd_hh_mm_ss}_{标题}.md`，
+日期时区沿用原程序的本地时区。每篇帖子使用独立的资源文件夹，名称等于 Markdown 文件名去掉 `.md`：
+
+```text
+data/aqechoo/motions/
+├── 2025-02-17_13_22_14_帖子标题.md
+└── .assets/
+    └── 2025-02-17_13_22_14_帖子标题/
+        ├── 帖子标题_0.png
+        ├── 帖子标题_1.jpg
+        ├── 作者上传的原文件名.7z
+        └── .downloadfile.json
+```
+
+- Markdown 保留来源、正文和图片，并在“附件”段落中链接本地原名文件。正文内嵌图片保留位置。
+- 附件保留原文件名；仅替换 Windows 不允许的字符、末尾空格/点和保留设备名。同一帖子附件重名时报告错误，不覆盖另一个附件。
+- 先收集分页列表，去重并按发布时间排序，再逐篇获取详情和下载，避免置顶帖影响顺序。
+- 无权限或无可下载附件的帖子不生成 Markdown；登录失效、接口异常会报错。
+- `.downloadfile.json` 记录完成状态及本地文件大小，不保存 Cookie 或签名下载链接。
+  再次运行会跳过资源完整的帖子，补下载缺失/大小不符的文件；下载失败的临时文件会清理。
+- 旧 `motions` 导出的同名 Markdown 若没有完成记录，会重新生成并补齐附件；原 `.assets` 中的旧资源不删除。
+- 下载使用流式写入、超时和有限重试，校验附件大小。Cookie 仅发送给配置的主站，不传给外部文件服务器。
+- `--skip_failed` 可在单篇失败后继续，其余帖子处理完仍会汇总失败并返回非零退出码。
+- 后续同步附件请再次执行 `downloadfile`；原 `update` 命令仍按原流程更新正文，不负责新增附件。
+
+开发验证：`go test ./...` 和 `go vet ./...`。原有远程集成测试需显式设置 `AFDIAN_INTEGRATION_TESTS=1` 并准备 `cookies.json`，默认测试不会访问真实账号。
+
 #### 下载作者所有的作品集
 
 ```shell

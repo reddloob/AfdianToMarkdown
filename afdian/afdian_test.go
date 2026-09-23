@@ -4,6 +4,7 @@ import (
 	"AfdianToMarkdown/config"
 	"AfdianToMarkdown/logger"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -24,6 +25,9 @@ func init() {
 	//执行测试前，先设置cookie路径为实际本地路径
 	slog.SetDefault(logger.SetupLogger(slog.LevelInfo))
 	cfg = config.NewConfig("afdian.com", `../data`, `../cookies.json`)
+	if os.Getenv("AFDIAN_INTEGRATION_TESTS") != "1" {
+		return
+	}
 	slog.Info("cookiePath:", "path", cfg.CookiePath)
 	var err error
 	cookieString, authToken, err = GetCookies(cfg.CookiePath)
@@ -32,11 +36,19 @@ func init() {
 	}
 }
 
+func requireLiveCookies(t *testing.T) {
+	t.Helper()
+	if os.Getenv("AFDIAN_INTEGRATION_TESTS") != "1" {
+		t.Skip("set AFDIAN_INTEGRATION_TESTS=1 and provide cookies.json for live API tests")
+	}
+}
+
 func getAlbumUrl(AlbumId string) string {
 	return fmt.Sprintf("%s/album/%s", cfg.HostUrl, AlbumId)
 }
 
 func TestGetAuthorId(t *testing.T) {
+	requireLiveCookies(t)
 	type args struct {
 		authorUrlSlug string
 		referer       string
@@ -75,6 +87,7 @@ func TestGetAuthorId(t *testing.T) {
 }
 
 func TestGetAlbumList(t *testing.T) {
+	requireLiveCookies(t)
 	type args struct {
 		userId       string
 		referer      string
@@ -119,6 +132,7 @@ func TestGetAlbumList(t *testing.T) {
 }
 
 func TestGetAlbumInfo(t *testing.T) {
+	requireLiveCookies(t)
 	tests := []struct {
 		name          string
 		albumId       string
@@ -144,6 +158,7 @@ func TestGetAlbumInfo(t *testing.T) {
 }
 
 func TestGetAlbumPostPage(t *testing.T) {
+	requireLiveCookies(t)
 	tests := []struct {
 		name     string
 		albumId  string
@@ -176,6 +191,7 @@ func TestGetAlbumPostPage(t *testing.T) {
 }
 
 func TestGetProductList(t *testing.T) {
+	requireLiveCookies(t)
 	tests := []struct {
 		name     string
 		userName string

@@ -3,6 +3,7 @@ package main
 import (
 	"AfdianToMarkdown/afdian"
 	"AfdianToMarkdown/afdian/album"
+	"AfdianToMarkdown/afdian/downloadfile"
 	"AfdianToMarkdown/afdian/motion"
 	"AfdianToMarkdown/afdian/shop"
 	"AfdianToMarkdown/config"
@@ -12,6 +13,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/signal"
 	"time"
 
 	md "github.com/JohannesKaufmann/html-to-markdown"
@@ -125,6 +127,18 @@ func main() {
 		},
 		Commands: []*cli.Command{
 			{
+				Name:  "downloadfile",
+				Usage: "按发布时间从新到旧保存含可下载附件的动态、图片和原名附件",
+				Flags: []cli.Flag{
+					&cli.StringFlag{Name: "author", Aliases: []string{"au"}, Required: true, Usage: "作者主页 /a/ 后的 ID"},
+				},
+				Action: func(ctx context.Context, cmd *cli.Command) error {
+					ctx, stop := signal.NotifyContext(ctx, os.Interrupt)
+					defer stop()
+					return downloadfile.Run(ctx, cfg, cmd.String("author"), cookieString, disableComment)
+				},
+			},
+			{
 				Name:  "motions",
 				Usage: "下载指定作者的所有动态",
 				Flags: []cli.Flag{
@@ -226,5 +240,6 @@ func main() {
 	}
 	if err := cmd.Run(context.Background(), os.Args); err != nil {
 		slog.Error(err.Error())
+		os.Exit(1)
 	}
 }
